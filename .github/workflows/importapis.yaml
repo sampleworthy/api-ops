@@ -31,6 +31,9 @@ jobs:
             serviceUrl=$(yq e '.servers[0].url' $file)
             versionId=$(yq e '.info.version' $file)
             displayName="$baseName-$versionId"
-            az apim api version set --api-id $baseName --version-id $versionId --description "Version $versionId" --versioning-scheme Path
-            az apim api import --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --api-id $baseName --api-version $versionId --display-name $displayName --service-url $serviceUrl --protocols https --specification-format OpenApi --specification-path $file
+            az apim api import --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --path $baseName --api-type http --api-id $baseName --display-name $displayName --service-url $serviceUrl --protocols https --specification-format OpenApi --specification-path $file
+            accessToken=$(az account get-access-token --query accessToken -o tsv)
+            subscriptionId=$(az account show --query id -o tsv)
+            apiId=$(az apim api list --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --query "[?name=='$baseName'].apiId" -o tsv)
+            curl -X PATCH -H "Authorization: Bearer $accessToken" -H "Content-Type: application/json" -d "{ \"properties\": { \"apiVersion\": \"$versionId\" } }" https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/${{ secrets.RESOURCE_GROUP }}/providers/Microsoft.ApiManagement/service/${{ secrets.APIM_INSTANCE }}/apis/$apiId?api-version=2019-01-01
           done
