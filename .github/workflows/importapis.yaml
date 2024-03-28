@@ -26,7 +26,7 @@ jobs:
 
       - name: Import APIs
         run: |
-          for file in ./openapi/*.yaml; do
+          for file in ./apis/*.yaml; do
             baseName=$(basename "$file" .yaml)
             serviceUrl=$(yq e '.servers[0].url' $file)
             versionId=$(yq e '.info.version' $file)
@@ -37,33 +37,3 @@ jobs:
             apiId=$(az apim api list --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --query "[?name=='$baseName'].apiId" -o tsv)
             curl -X PATCH -H "Authorization: Bearer $accessToken" -H "Content-Type: application/json" -d "{ \"properties\": { \"apiVersion\": \"$versionId\" } }" https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/${{ secrets.RESOURCE_GROUP }}/providers/Microsoft.ApiManagement/service/${{ secrets.APIM_INSTANCE }}/apis/$apiId?api-version=2019-01-01
           done
-
-      - name: Set up Python environment
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-
-      - name: Run Python script
-        run: python ./apiazure.py
-        env:
-          clientId: ${{ secrets.CLIENT_ID }}
-          clientSecret: ${{ secrets.CLIENT_SECRET }}
-          resourceGroupName: ${{ secrets.RESOURCE_GROUP }}
-          apimServiceName: ${{ secrets.APIM_INSTANCE }}
-          tenantId: ${{ secrets.TENANT_ID }}
-          subscriptionId: ${{ secrets.SUBSCRIPTION_ID }}
-
-      - name: Run api-create-update.py
-        run: python api-create-update.py
-        env:
-            clientId: ${{ secrets.CLIENT_ID }}
-            clientSecret: ${{ secrets.CLIENT_SECRET }}
-            resourceGroupName: ${{ secrets.RESOURCE_GROUP }}
-            apimServiceName: ${{ secrets.APIM_INSTANCE }}
-            tenantId: ${{ secrets.TENANT_ID }}
-            subscriptionId: ${{ secrets.SUBSCRIPTION_ID }}
