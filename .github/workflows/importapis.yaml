@@ -27,7 +27,7 @@ jobs:
       - name: Import APIs
         run: |
           for file in ./apis/*.yaml; do
-            baseName=$(basename "$file" .openapi.yaml)
+            baseName=$(basename "$file" .yaml)
             serviceUrl=$(yq e '.servers[0].url' $file)
             apiId=$(az apim api list --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --query "[?name=='$baseName'].apiId" -o tsv)
             if [ -z "$apiId" ]; then
