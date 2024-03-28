@@ -49,7 +49,7 @@ jobs:
           pip install requests
 
       - name: Run Python script
-        run: python ./path_to_your_script.py
+        run: python ./apiazure.py
         env:
           clientId: ${{ secrets.CLIENT_ID }}
           clientSecret: ${{ secrets.CLIENT_SECRET }}
