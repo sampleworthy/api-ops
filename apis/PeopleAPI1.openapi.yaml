@@ -1,0 +1,72 @@
+openapi: 3.0.1
+info:
+  title: PeopleAPI
+  description: Import from "myfunc" Function App
+  version: '1.0'
+servers:
+  - url: https://apimana.azure-api.net/peopleapi
+paths:
+  /createnewdb:
+    get:
+      summary: init-db
+      operationId: get-init-db
+      responses:
+        '200':
+          description: 
+  '/person/{id}':
+    delete:
+      summary: remove-person
+      operationId: delete-remove-person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: ''
+      responses:
+        '200':
+          description: 
+    put:
+      summary: update-person
+      operationId: put-update-person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: ''
+      responses:
+        '200':
+          description: 
+    get:
+      summary: get-person
+      operationId: get-get-person
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: ''
+      responses:
+        '200':
+          description: 
+  /newPerson:
+    post:
+      summary: new-person
+      operationId: post-new-person
+      responses:
+        '200':
+          description: 
+components:
+  securitySchemes:
+    apiKeyHeader:
+      type: apiKey
+      name: Ocp-Apim-Subscription-Key
+      in: header
+    apiKeyQuery:
+      type: apiKey
+      name: subscription-key
+      in: query
+security:
+  - apiKeyHeader: [ ]
+  - apiKeyQuery: [ ]
