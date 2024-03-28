@@ -59,7 +59,7 @@ jobs:
           subscriptionId: ${{ secrets.SUBSCRIPTION_ID }}
 
       - name: Run api-create-update.py
-        run: python api-create-update.py
+        run: python api-create-update.py ${{ github.sha }}
         env:
             clientId: ${{ secrets.CLIENT_ID }}
             clientSecret: ${{ secrets.CLIENT_SECRET }}
