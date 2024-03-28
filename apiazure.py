@@ -47,7 +47,7 @@ def createOrUpdateVersionSet(apiPath):
 
 def main():
     regex = re.compile("^([a-zA-Z0-9_]*)-(v\d{0,3})\.yaml$")
-    files = os.listdir('./openapi/')
+    files = os.listdir('./apis/')
     files = [file for file in files if regex.match(file)]
     if files:
         print("Checking Version Sets...")
