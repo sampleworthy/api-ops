@@ -1,0 +1,41 @@
+name: Import APIs to APIM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  import-apis:
+    runs-on: ubuntu-latest
+    name: Import APIs
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install yq
+        run: |
+          sudo add-apt-repository ppa:rmescandon/yq
+          sudo apt update
+          sudo apt install yq -y
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Import APIs
+        run: |
+          for file in ./apis/*.yaml; do
+            baseName=$(basename "$file" .yaml)
+            serviceUrl=$(yq e '.servers[0].url' $file)
+            apiId=$(az apim api list --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --query "[?name=='$baseName'].apiId" -o tsv)
+            if [ -z "$apiId" ]; then
+              echo "API does not exist, creating new one"
+              az apim api create --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --path $baseName --api-type http --api-id $baseName --display-name $baseName --service-url $serviceUrl --protocols https --specification-format OpenApi --specification-path $file
+            else
+              echo "API exists, creating new revision"
+              revision=$(az apim api revision list --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --api-id $apiId --query "length([?isCurrent=='true'])" -o tsv)
+              az apim api revision create --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --api-id $apiId --api-revision $((revision+1)) --api-version-description "New revision" --import --specification-format OpenApi --specification-path $file
+            fi
+          done
