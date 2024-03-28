@@ -32,7 +32,7 @@ jobs:
             apiId=$(az apim api list --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --query "[?name=='$baseName'].apiId" -o tsv)
             if [ -z "$apiId" ]; then
               echo "API does not exist, creating new one"
-              az apim api create --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --path $baseName --api-type http --api-id $baseName --display-name $baseName --service-url $serviceUrl --protocols https --specification-format OpenApi --specification-path $file
+              az apim api import --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --path $baseName --api-type http --api-id $baseName --display-name $baseName --service-url $serviceUrl --protocols https --specification-format OpenApi --specification-path $file
             else
               echo "API exists, creating new revision"
               revision=$(az apim api revision list --resource-group ${{ secrets.RESOURCE_GROUP }} --service-name ${{ secrets.APIM_INSTANCE }} --api-id $apiId --query "length([?isCurrent=='true'])" -o tsv)
