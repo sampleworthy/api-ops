@@ -57,3 +57,13 @@ jobs:
           apimServiceName: ${{ secrets.APIM_INSTANCE }}
           tenantId: ${{ secrets.TENANT_ID }}
           subscriptionId: ${{ secrets.SUBSCRIPTION_ID }}
+
+      - name: Run api-create-update.py
+        run: python api-create-update.py
+        env:
+            clientId: ${{ secrets.CLIENT_ID }}
+            clientSecret: ${{ secrets.CLIENT_SECRET }}
+            resourceGroupName: ${{ secrets.RESOURCE_GROUP }}
+            apimServiceName: ${{ secrets.APIM_INSTANCE }}
+            tenantId: ${{ secrets.TENANT_ID }}
+            subscriptionId: ${{ secrets.SUBSCRIPTION_ID }}
