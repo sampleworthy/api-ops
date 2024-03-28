@@ -1,0 +1,1314 @@
+components:
+    parameters:
+        aggregate:
+            description: Should elibible records be "aggregated"
+            in: query
+            name: aggregate
+            schema:
+                default: false
+                type: boolean
+        aggregationLimit:
+            description: |
+                This defines the limit of how many records are part of a single aggregate before aggregation paging begins.
+            in: query
+            name: aggregationLimit
+            schema:
+                default: 50
+                format: int32
+                type: integer
+        application:
+            description: |
+                This specifies the application as a filter for the query.
+            in: query
+            name: application
+            schema:
+                type: string
+        client:
+            description: |
+                The requesting client, used to apply additional filtering rules.  For example, "sasdrive" does not want "open" activities returned. Conventionally this is lower case.
+            in: query
+            name: client
+            required: false
+            schema:
+                type: string
+        compress:
+            description: Should eligible records be "compressed"
+            in: query
+            name: compress
+            schema:
+                default: false
+                type: boolean
+        feature:
+            description: |
+                This specifies the feature as a filter for the query.
+            in: query
+            name: feature
+            schema:
+                type: string
+        filter:
+            description: |
+                Query filter, supported fields: `type`, `objectType`, `userId`, `application`, `timeStamp`.
+            in: query
+            name: filter
+            schema:
+                type: string
+        filterFacets:
+            description: |
+                Query filter, supported fields: `type`, `objectType`, `userId`, `application`, `timeStamp` as well as  `activityType` which is a synonym for `type`.
+            in: query
+            name: filter
+            schema:
+                type: string
+        limit:
+            description: Pagination parameter, how many items to return.
+            in: query
+            name: limit
+            schema:
+                default: 100
+                format: int32
+                type: integer
+        sortBy:
+            description: Optional sorting instruction, by default by date, newest first.
+            in: query
+            name: sortBy
+            schema:
+                default: timeStamp:descending
+                type: string
+        start:
+            description: Pagination parameter, what is the starting index.
+            in: query
+            name: start
+            schema:
+                default: 0
+                format: int32
+                type: integer
+        touchpointsFilter:
+            description: |
+                Query filter, supported fields: `application`, `feature`, `count`, `creationTimeStamp`, `modifiedTimeStamp`.
+            in: query
+            name: filter
+            schema:
+                type: string
+        touchpointsSortBy:
+            description: Optional sorting instruction.
+            in: query
+            name: sortBy
+            schema:
+                default: application:ascending,feature:ascending
+                type: string
+        uri:
+            description: |
+                URI to the object to get activities for.  This is expected to be a "relative" URI without request parameters, for example `/reports/reports/1234`.
+            in: query
+            name: uri
+            required: true
+            schema:
+                type: string
+    requestBodies:
+        selectionBody:
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/urisSelection'
+                application/vnd.sas.selection+json:
+                    schema:
+                        $ref: '#/components/schemas/urisSelection'
+            description: |
+                The URIs to check, in the form of a "selection". Any use of selection's `type` is supported, but must resolve to relative URIs.
+            required: true
+    schemas:
+        activeUris:
+            description: |
+                Contains a list of URIs which are "active" (per query parameters).  In very rare case, also has a list of unreadableUris.  The size of the return is limited to be a subset of the selection passed as input, and so will be reasonably constrained.
+            example:
+                activeUris:
+                    - /reports/reports/627dba7b-b6cb-4b91-b606-094178866547
+                    - /reports/reports/127dba7b-a6cb-db9f-f636-7529d590fec1
+                links:
+                    - rel: self
+                version: 1
+            properties:
+                activeUris:
+                    description: List of active URIs
+                    items:
+                        type: string
+                    title: list of active URIs
+                    type: array
+                links:
+                    items:
+                        $ref: '#/components/schemas/link'
+                    type: array
+                unreadableUris:
+                    description: Very unusual, caller supplied 1 or more unreadable URIs, which are listed here. Typically this list is null.
+                    items:
+                        type: string
+                    title: list of unreadable URIs
+                    type: array
+                version:
+                    description: This media type's schema version number. This representation is version 1.
+                    format: int32
+                    type: integer
+            required:
+                - activeUris
+            title: active URIs
+            x-sas-media-type:
+                name: application/vnd.sas.activities.active.uris
+                version: 1
+        activity:
+            allOf:
+                - $ref: '#/components/schemas/activitySummary'
+                - properties:
+                    properties:
+                        description: (Rare) map(string,string) of associated properties.  These are specified by the client to provide substitution parameters corresponding to the activity type's label.  For example, a rename activity would specify both oldName and newName.
+                        type: object
+                  type: object
+            description: |
+                Activity details, including internal "properties". This media type represents an activity.  (`application/vnd.sas.activities.activity`) The following members are system generated: `id`, `label`, `userId`, `userName`, `timeStamp`, `children`, `links`.
+            example:
+                application: sasdrive
+                count: 1
+                label: Opened by Pebbles Flintstone
+                links:
+                    - rel: self
+                timeStamp: 2018-11-13T20:59:18.588Z
+                type: open
+                uri: /reports/reports/5e26d02c-9e88-4f85-bf5e-ee91fa10a563
+                userId: pebblesf
+                userName: Pebbles Flintstone
+                version: 1
+            required:
+                - uri
+                - type
+                - objectType
+            title: full activity details
+            x-sas-media-type:
+                name: application/vnd.sas.activities.activity
+                version: 1
+        activitySummary:
+            description: |
+                Primary media type of this API. This media type represents an activity.  (`application/vnd.sas.activities.activity.summary`)  Contains all members of the full form except "properties". The following members are system generated: `id`, `label`, `userId`, `userName`, `timeStamp`, `children`, `links`.
+            properties:
+                application:
+                    description: |
+                        The application name which performed this activity.  Conventionally this is lower case.  Clients are encouraged to specify this for various "reporting" use cases.
+                    type: string
+                associatedUris:
+                    description: |
+                        Often null, URIs to objects corresponding to values.  For example, for a comment, this will contain a URI to the corresponding comment object.  For users or groups (sharing, possibly other use cases) this will be the URI to the user or group identity.
+                    items:
+                        type: string
+                    type: array
+                children:
+                    description: Array of child records, will only appear for "aggregation" cases, and only a single level (no recursion).
+                    items:
+                        $ref: '#/components/schemas/activitySummary'
+                    type: array
+                count:
+                    default: 1
+                    description: Positive integer, how many times was this activity performed.
+                    format: int32
+                    type: integer
+                id:
+                    description: Unique identifier for this activity
+                    type: string
+                label:
+                    description: Localized label suitable to present to the user.
+                    type: string
+                links:
+                    items:
+                        $ref: '#/components/schemas/link'
+                    type: array
+                objectType:
+                    description: |
+                        The type of the object the URI refers to, e.g. report, model. Must be the underlying type not its label.
+                    type: string
+                timeStamp:
+                    description: When the activity was performed
+                    format: date-time
+                    type: string
+                type:
+                    description: |
+                        The "type" of this activity, for example: "update", "open", "print", "setChampion".
+                    type: string
+                uri:
+                    description: |
+                        URI to the object.  This is expected to be a "relative" URI without request parameters, for example `/reports/reports/1234`.
+                    type: string
+                userId:
+                    description: The userId of the user who performed this activity.
+                    type: string
+                userName:
+                    description: The name of the user who performed this activity.
+                    type: string
+                values:
+                    description: Associated values, for example a list of tags added, or a portion of the comment text.
+                    items:
+                        type: string
+                    type: array
+                version:
+                    description: This media type's schema version number. This representation is version 1.
+                    format: int32
+                    type: integer
+            required:
+                - uri
+                - type
+                - objectType
+            title: details of an activity
+            x-sas-media-type:
+                name: application/vnd.sas.activities.activity.summary
+                version: 1
+        activitySummaryCollection:
+            allOf:
+                - $ref: '#/components/schemas/baseCollection2'
+                - properties:
+                    items:
+                        description: Array of activities.
+                        items:
+                            $ref: '#/components/schemas/activitySummary'
+                        type: array
+                  type: object
+            description: A standard SAS collection (of Activity) which supports paging.
+            title: collection of activities
+        activityType:
+            description: An activity type definition
+            properties:
+                id:
+                    description: The unique id for this type, this will be the "activity type" and can be used in a filter. e.g. "open", "print", "setChampion".
+                    type: string
+                label:
+                    description: Localized label for this activty type.
+                    type: string
+                objectTypes:
+                    description: |
+                        Often null, this identifies the object type(s) this activityType is constrained to.  For example `setChampion` and `clearChampion` might both specify `model`.  Possibly multiple object types  are appropriate.  Typically registrations will not specify this, allowing the activity to be registered with any object type. (Note that this is the actual type of the object, e.g. "report", not its label, "Report".)
+                    items:
+                        type: string
+                    type: array
+                usageNote:
+                    description: |
+                        (Not to be shown to the user) - developer hint from designer of the activity to the developer POSTing an activity.  Principle use is to document any `properties` needed. This will not be localized.
+                    type: string
+                valueBehavior:
+                    description: |
+                        (Typically null) this describes the type of item in the values array of an activity of  this type, allowing the client to perform type specific behavior. New values of this enum may be registered,  clients need to be prepared for unrecognized values.  Clients are free to ignore this.  Note that for `identity`, the values will be calculated based corresponding entries in `associatedUris`, each which will be a link in the Identities API.
+                    enum:
+                        - identity
+                        - comment
+                        - tag
+                    type: string
+                valueMaxLength:
+                    description: |
+                        (Typically null) if the value(s) returned with an activity of this type are subject to  truncation, what is the length limit? A client could use this to know the string was truncated.
+                    type: integer
+                valueRendering:
+                    description: |
+                        (Typically null) this is a rendering hint for items in the values array of an activity of  this type, allowing the client to render the value appropriately. New values of this enum may be registered,  clients need to be prepared for unrecognized values.  Clients are free to ignore this.
+                    enum:
+                        - identity
+                        - oval
+                        - removedOval
+                    type: string
+                version:
+                    description: This media type's schema version number. This representation is version 1.
+                    format: int32
+                    type: integer
+            title: an activity type definition
+            x-sas-media-type:
+                name: application/vnd.sas.activities.type
+                version: 1
+        activityTypeCollection:
+            allOf:
+                - $ref: '#/components/schemas/baseCollection2'
+                - properties:
+                    items:
+                        description: Array of activity type.
+                        items:
+                            $ref: '#/components/schemas/activityType'
+                        type: array
+                  type: object
+            description: A standard SAS collection (of ActivityType). This collection will be small and does not support paging or filtering.
+            title: collection of activity types
+        api:
+            description: The list of links to top-level resources and operations available from the root of the API.
+            properties:
+                links:
+                    description: The API's top-level links.
+                    items:
+                        $ref: '#/components/schemas/link'
+                    type: array
+                version:
+                    description: The version number of the API representation. This is version 1.
+                    minimum: 1
+                    type: integer
+            required:
+                - version
+                - links
+            title: API
+            x-sas-media-type:
+                name: application/vnd.sas.api
+                version: 1
+        baseCollection2:
+            description: This is a base schema used to define paginated collections of resources. This base schema is extended by other schemas in APIs by adding an 'items' array property. These extensions define the application/vnd.sas.collection media type (version 2)
+            properties:
+                accept:
+                    description: A space-delimited list of media types from which an `Accept` header may be constructed.
+                    type: string
+                count:
+                    description: If populated indicates the number of items in the collection.
+                    format: int64
+                    type: integer
+                limit:
+                    description: The number of items that were requested for the collection.
+                    type: integer
+                links:
+                    description: The links that apply to the collection.
+                    items:
+                        $ref: '#/components/schemas/link'
+                    type: array
+                name:
+                    description: The name of the collection.
+                    type: string
+                start:
+                    description: The zero-based index of the first item in the collection.
+                    format: int64
+                    type: integer
+                version:
+                    description: The version number of the collection representation. This representation is version 2.
+                    type: integer
+            title: Base Collection
+        error2:
+            description: The representation of an error.
+            properties:
+                details:
+                    description: Messages that provide additional details about the cause of the error.
+                    items:
+                        type: string
+                    type: array
+                errorCode:
+                    description: The numeric ID for the error.
+                    type: integer
+                errors:
+                    description: Any additional errors that occurred.
+                    items:
+                        $ref: '#/components/schemas/error2'
+                    type: array
+                httpStatusCode:
+                    description: The HTTP status code for the error.
+                    type: integer
+                id:
+                    description: The string ID for the error.
+                    type: string
+                links:
+                    description: The links that apply to the error.
+                    items:
+                        $ref: '#/components/schemas/link'
+                    type: array
+                message:
+                    description: The message for the error.
+                    type: string
+                remediation:
+                    description: A message that describes how to resolve the error.
+                    type: string
+                version:
+                    description: The version number of the error representation. This representation is version 2.
+                    type: integer
+            required:
+                - httpStatusCode
+                - version
+            title: Error
+            type: object
+            x-sas-media-type:
+                name: application/vnd.sas.error
+                version: 2
+        facetTypeItem:
+            description: Single type information
+            properties:
+                activityType:
+                    description: The specific type code, such as `update`, `open`, `rename`.
+                    type: string
+                count:
+                    description: How many instances.
+                    format: int32
+                    type: integer
+                label:
+                    description: Localized label for this activity type.  The list will be sorted by this member.
+                    type: string
+            required:
+                - activityType
+                - label
+                - count
+            title: single type information
+        facetUserItem:
+            description: Single user information
+            properties:
+                count:
+                    description: How many instances.
+                    format: int32
+                    type: integer
+                userId:
+                    description: The user id.
+                    type: string
+                userName:
+                    description: The user name.  The list will be sorted by this member.
+                    type: string
+            required:
+                - userId
+                - userName
+                - count
+            title: single user information
+        facets:
+            description: |
+                For the specified resource, lists of users and types with activities.  Counts are supplied.  The `activityTypes` list will be sorted by `label`. The `users` list will be sorted by `userName`.
+            example:
+                activityTypes:
+                    - activityType: comment
+                      count: 4
+                      label: Comments
+                    - activityType: share
+                      count: 3
+                      label: Shares
+                users:
+                    - count: 6
+                      userId: bammr
+                      userName: Bamm-Bamm Rubble
+                    - count: 1
+                      userId: unknown
+                      userName: (profile removed)
+                version: 1
+            properties:
+                activityTypes:
+                    description: List of activity types.
+                    items:
+                        $ref: '#/components/schemas/facetTypeItem'
+                    title: list of activity types.
+                    type: array
+                users:
+                    description: List of users.
+                    items:
+                        $ref: '#/components/schemas/facetUserItem'
+                    title: list of users.
+                    type: array
+                version:
+                    description: This media type's schema version number. This representation is version 1.
+                    format: int32
+                    type: integer
+            required:
+                - activityTypes
+                - users
+            title: the facets of a resource
+            x-sas-media-type:
+                name: application/vnd.sas.activities.facets
+                version: 1
+        link:
+            description: A link to a related operation or resource.
+            properties:
+                href:
+                    description: The URL for the link.
+                    type: string
+                itemType:
+                    description: If this is a link to a container, `itemType` is the media type or link type for the items in the container.
+                    type: string
+                method:
+                    description: The HTTP method for the link.
+                    type: string
+                rel:
+                    description: The relationship of the link to the resource.
+                    type: string
+                responseItemType:
+                    description: The media type or link type of the items in the response body for a `PUT`, `POST`, or `PATCH` operation.
+                    type: string
+                responseType:
+                    description: The media type or link type of the response body for a `PUT`, `POST`, or `PATCH` operation.
+                    type: string
+                title:
+                    description: The title for the link.
+                    type: string
+                type:
+                    description: The media type or link type for the link.
+                    type: string
+                uri:
+                    description: The relative URI for the link.
+                    type: string
+            required:
+                - rel
+            title: Link
+            type: object
+        selection:
+            description: Identifies a set of resources.
+            properties:
+                links:
+                    description: An array of links to related resources and actions.
+                    items:
+                        $ref: '#/components/schemas/link'
+                    type: array
+                resources:
+                    description: An array of resource IDs or URIs
+                    items:
+                        type: string
+                    type: array
+                template:
+                    description: 'A URI template in which the {id} parameter can be replaced with a value from the "resources" array in order to yield the URI of the identified resource. '
+                    type: string
+                type:
+                    description: "Specifies whether the resources array contains IDs, URIs, or both. \n<dl>\n<dt>\"id\"</dt><dd>the array contains resource identifiers only. This is the default if \"type\" is omitted.</dd>\n<dt>\"uri\"</dt><dd>the array contains resource URIs</dd>\n<dt>\"mixed\"</dt><dd>the array contains a mixture of identifiers and URIs.</dd>\n</dl>"
+                    enum:
+                        - id
+                        - uri
+                        - mixed
+                    type: string
+                version:
+                    description: The schema version number of this media type. This representation is version 1.
+                    type: integer
+            required:
+                - version
+                - resources
+            title: Selection
+            x-sas-media-type:
+                name: application/vnd.sas.selection
+                version: 1
+        touchpoint:
+            description: |
+                Separate from activity, a touchpoint is composed of string application and feature and represent areas of an application being tracked to see if it is being used.  The user using the application is not tracked.
+            example:
+                application: sasdrive
+                count: 722
+                creationTimeStamp: 2018-11-17T06:03:12.017Z
+                feature: quickAccess
+                id: sasdrive_quickAccess
+                links:
+                    - href: /activities/touchpoints/sasdrive_quickAccess
+                      method: GET
+                      rel: self
+                      type: application/vnd.sas.activities.touchpoint
+                      uri: /activities/touchpoints/sasdrive_quickAccess
+                modifiedTimeStamp: 2019-01-07T16:14:42.317Z
+                version: 1
+            properties:
+                application:
+                    description: The application's name, this can be its internal name, but should be consistent. lowerCamelCase is recommended.
+                    title: application
+                    type: string
+                count:
+                    description: The number of times this touchpoint has been updated.  System derived.
+                    format: int32
+                    title: count
+                    type: integer
+                creationTimeStamp:
+                    description: The time stamp this touchpoint was created.
+                    format: date-time
+                    title: creation time stamp
+                    type: string
+                feature:
+                    description: The application determined 'feature' for the portion of the application being tracked. lowerCamelCase is recommended.
+                    title: feature
+                    type: string
+                id:
+                    description: System determined identifier of this touchpoint
+                    title: id
+                    type: string
+                links:
+                    items:
+                        $ref: '#/components/schemas/link'
+                    type: array
+                modifiedTimeStamp:
+                    description: The time stamp of the last time this touchpoint was updated.
+                    format: date-time
+                    title: modified time stamp
+                    type: string
+                version:
+                    description: This media type's schema version number. This representation is version 1.
+                    format: int32
+                    type: integer
+            required:
+                - application
+                - feature
+            title: touchpoint
+            x-sas-media-type:
+                name: application/vnd.sas.activities.touchpoint
+                version: 1
+        touchpointCollection:
+            allOf:
+                - $ref: '#/components/schemas/baseCollection2'
+                - properties:
+                    items:
+                        description: Array of touchpoints.
+                        items:
+                            $ref: '#/components/schemas/touchpoint'
+                        type: array
+                  type: object
+            description: A standard SAS collection (of Touchpoint) which supports paging.
+            title: collection of touchpoints
+        urisSelection:
+            allOf:
+                - $ref: '#/components/schemas/selection'
+            description: Selection (list) of URIs to examine.
+            title: selection of URIs
+info:
+    contact:
+        email: devex@sas.com
+        name: SAS Developers
+        url: https://developer.sas.com
+    description: ' The activities API records high level "activities" for an object, and provides an ordered list of these activities for a specific object upon request.'
+    title: Activities
+    version: "1"
+openapi: 3.0.3
+paths:
+    /:
+        get:
+            description: The root links for this API. <p>Link relations:</p> <ul> <li>"getActivities" - get collection of activities for a uri; the link includes required parameter `uri`</li> <li>"getActivitiesAggregated" - get collection of activities, with aggregation and compression, for a uri; the link includes required parameter `uri`</li> <li>"bulkGetActivities" - get via post, request body contains a selection of URIs to get activities for</li> <li>"createActivity" - add an activity instance</li> <li>"getFacets" - get a list of activity types, and users, with activities for a uri; the link includes required parameter `uri`</li> <li>"bulkGetFacets" - get via post, request body contains a selection of URIs to get facets for</li> <li>"getTypes" - get collection of activity types</li> <li>"getActiveUris" - get via post, request body contains a selection of URIs to examine for any activity</li> <li>"createTouchpoint" - create the specified touchpoint</li> <li>"getTouchpoints" - get touchpoints</li> <li>"deleteTouchpoints" - delete touchpoints.  This link will only be presented to administrators.</li> <li>"deleteOldRecords" - delete; the link includes required parameter `olderThan`. Optional parameter `uri` restricts the deletion to just records for the specified `uri`. This link will only be presented to administrators.</li> </ul>
+            operationId: root
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/api'
+                        application/vnd.sas.api+json:
+                            schema:
+                                $ref: '#/components/schemas/api'
+                    description: The API's links.
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+            summary: Get the top-level links
+            tags:
+                - Root
+    /activeUris:
+        post:
+            description: |
+                From the supplied selection of URIs, determine which have had activity.  Filter criteria can limit the scope of the analysis, for example to particular activity types or after a certain date.  There is a system imposed limit of 500 URIs in the request body.
+                In the very rare case, some of the supplied URIs are not readable by the user. In this case the list `unreadableUris` is also included in the response.
+            operationId: bulkGetActiveUris
+            parameters:
+                - $ref: '#/components/parameters/client'
+                - $ref: '#/components/parameters/filter'
+            requestBody:
+                $ref: '#/components/requestBodies/selectionBody'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/activeUris'
+                        application/vnd.sas.activities.active.uris+json:
+                            schema:
+                                $ref: '#/components/schemas/activeUris'
+                    description: The active URIs
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.activities.active.uris+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid
+            summary: Get active URIs
+            tags:
+                - Activities
+    /activities:
+        get:
+            description: Returns a list of activities for the specified object. Pagination, filtering, and sorting are supported. Returned items will be of media type `application/vnd.sas.activities.activity.summary`.
+            operationId: getActivities
+            parameters:
+                - $ref: '#/components/parameters/uri'
+                - $ref: '#/components/parameters/client'
+                - $ref: '#/components/parameters/start'
+                - $ref: '#/components/parameters/limit'
+                - $ref: '#/components/parameters/filter'
+                - $ref: '#/components/parameters/sortBy'
+                - $ref: '#/components/parameters/compress'
+                - $ref: '#/components/parameters/aggregate'
+                - $ref: '#/components/parameters/aggregationLimit'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/activitySummaryCollection'
+                        application/vnd.sas.collection+json:
+                            schema:
+                                $ref: '#/components/schemas/activitySummaryCollection'
+                    description: The requested activities
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.collection+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid.
+            summary: Get list of activities for the specified object (uri)
+            tags:
+                - Activities
+        post:
+            description: Create an activity
+            operationId: createActivity
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/activity'
+                    application/vnd.sas.activities.activity+json:
+                        schema:
+                            $ref: '#/components/schemas/activity'
+                description: |
+                    The activity to create.  The following fields are system generated and ignored in input:  `id`, `label`, `userId`, `userName`, `timeStamp`, `children` & `links`.
+                    Returned links will include `self` and `alternate`, but not `delete` (which is admin restricted and available after following the `self` link).
+                required: true
+            responses:
+                "201":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/activity'
+                        application/vnd.sas.activities.activity+json:
+                            schema:
+                                $ref: '#/components/schemas/activity'
+                    description: The activity has been created
+                    headers:
+                        Location:
+                            description: Location of the new activity.
+                            schema:
+                                format: URL
+                                type: string
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.activities.activity+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid.
+            summary: Create an activity
+            tags:
+                - Activities
+    /activities#bulkGetActivities:
+        post:
+            description: |
+                Returns a list of activities for the specified objects. Pagination, filtering, and sorting are supported. Returned items will be of media type `application/vnd.sas.activities.activity.summary`.There is a system imposed limit of 500 URIs in the request body.
+                This operation is nearly identical to `getActivities`, except that multiple URIs are supported by supplying a `selection` in the request body (thus "GET via POST").  Pagination is supported, but note: (a) the returned pagination links are POST, and (b) the client must supply the original request body with each invocation.
+                Note that since operation `createActivity` consumes `application/json`, this operation cannot; the client must specify `Content-Type: application/vnd.sas.selection+json`.
+            operationId: bulkGetActivities
+            parameters:
+                - $ref: '#/components/parameters/client'
+                - $ref: '#/components/parameters/start'
+                - $ref: '#/components/parameters/limit'
+                - $ref: '#/components/parameters/filter'
+                - $ref: '#/components/parameters/sortBy'
+                - $ref: '#/components/parameters/compress'
+                - $ref: '#/components/parameters/aggregate'
+                - $ref: '#/components/parameters/aggregationLimit'
+            requestBody:
+                $ref: '#/components/requestBodies/selectionBody'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/activitySummaryCollection'
+                        application/vnd.sas.collection+json:
+                            schema:
+                                $ref: '#/components/schemas/activitySummaryCollection'
+                    description: The requested activities
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.collection+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid.
+            summary: Get activities for multiple URIs
+            tags:
+                - Activities
+    /activities/{activityId}:
+        delete:
+            description: Admin remove a single activity
+            operationId: deleteActivity
+            parameters:
+                - description: The ID of the activity
+                  in: path
+                  name: activityId
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "204":
+                    description: No content
+                "403":
+                    content:
+                        '*/*':
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Forbidden. This is a restricted resource, most users are not allowed.
+            summary: Admin remove a single activity
+            tags:
+                - Activities
+        get:
+            description: |
+                Return a specified activity.  Links returned include `self`, `alternate`, and possibly admin restricted `delete`.
+            operationId: getActivity
+            parameters:
+                - description: The ID of the activity
+                  in: path
+                  name: activityId
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/activity'
+                        application/vnd.sas.activities.activity:
+                            schema:
+                                $ref: '#/components/schemas/activity'
+                    description: The requested activity
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "404":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.activities.activity:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: not found
+            summary: Get a single activity
+            tags:
+                - Activities
+    /deletions:
+        post:
+            description: "Administrative request to delete operations older than a certain date/time; optionally restricted to a single object (uri).  \n"
+            operationId: deleteOldRecords
+            parameters:
+                - description: |
+                    Timestamp for which older records should be deleted. In addition to a standard date-time format, relative day/hours in the form %dd%dh is accepted. For example 3d6h.
+                  in: query
+                  name: olderThan
+                  required: true
+                  schema:
+                    format: date-time
+                    type: string
+                - description: |
+                    Optional parameter specifying the uri to delete old records for.  If absent, then ALL resources are subject to old record removal.
+                  in: query
+                  name: uri
+                  required: false
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                example: 42
+                                format: int32
+                                type: integer
+                        application/vnd.sas.primitive.integer+json:
+                            schema:
+                                example: 42
+                                format: int32
+                                type: integer
+                    description: OK.  Qualifying records have been deleted. Return a "primitive" integer, the count of the number of records deleted.
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.primitive.integer+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Bad Request. Required parameter not supplied or bad format.
+                "403":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.primitive.integer+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Forbidden. This is a restricted resource, most users are not allowed.
+            summary: Administrative action to delete old activity records
+            tags:
+                - Maintenance
+    /facets:
+        get:
+            description: |
+                Facets are labels and counts for the activity types and users of a specified uri.  This information can help a user make filter choices.  Note that the return is not a collection.
+            operationId: getFacets
+            parameters:
+                - $ref: '#/components/parameters/uri'
+                - $ref: '#/components/parameters/client'
+                - $ref: '#/components/parameters/filterFacets'
+                - description: |
+                    Optional parameter to specify which data should be returned, member `activityTypes`, `users` or both.
+                  in: query
+                  name: fields
+                  schema:
+                    default: activityTypes,users
+                    enum:
+                        - activityTypes
+                        - users
+                        - activityTypes,users
+                    type: string
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/facets'
+                        application/vnd.sas.activities.facets+json:
+                            schema:
+                                $ref: '#/components/schemas/facets'
+                    description: The facets
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.activities.facets+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid; `uri` was not specified or not readable.
+            summary: Get facets for specified uri
+            tags:
+                - Activities
+        post:
+            description: |
+                Facets are labels and counts for the activity types and users of a specified selection of uris.  This information can help a user make filter choices.  Note that this get-via-post pattern uses the request body to specify a selection of in the same way as operation bulkGetActivities. This operation is identical to  `getFacets` except that multiple URIs can be specified.  Note that the return is not a collection and that a single result represents the facets for each supplied uri.  (A use case might be to get the facets for all members of a "Project".)
+            operationId: bulkGetFacets
+            parameters:
+                - $ref: '#/components/parameters/client'
+                - $ref: '#/components/parameters/filterFacets'
+                - description: |
+                    Optional parameter to specify which data should be returned, member `activityTypes`, `users` or both.
+                  in: query
+                  name: fields
+                  schema:
+                    default: activityTypes,users
+                    enum:
+                        - activityTypes
+                        - users
+                        - activityTypes,users
+                    type: string
+            requestBody:
+                $ref: '#/components/requestBodies/selectionBody'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/facets'
+                        application/vnd.sas.activities.facets+json:
+                            schema:
+                                $ref: '#/components/schemas/facets'
+                    description: The facets
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.activities.facets+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid; possibly error reading request body.
+            summary: Bulk get facets for specified uris
+            tags:
+                - Activities
+    /privacy/forgetMe:
+        post:
+            description: |
+                NOT IMPLEMENTED- The current user should be removed from existing activity records. (NOTE - THIS MIGHT CHANGE BASED ON GDPR REVIEW)
+            operationId: forgetMe
+            responses:
+                "202":
+                    description: Accepted.  The database will be updated.
+            summary: NOT IMPLEMENTED- self-service operation to forget the current user
+            tags:
+                - Privacy
+    /privacy/forgetUser:
+        post:
+            description: |
+                NOT IMPLEMENTED- The specified user should be removed from existing activity records. (NOTE - THIS MIGHT CHANGE BASED ON GDPR REVIEW)
+            operationId: forgetUser
+            parameters:
+                - description: The user's userId to be forgotten
+                  in: query
+                  name: userId
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "202":
+                    description: Accepted.  The database will be updated.
+                "400":
+                    content:
+                        '*/*':
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Bad Request. Required parameter not supplied.
+                "403":
+                    content:
+                        '*/*':
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Forbidden. This is a restricted resource, most users are not allowed.
+            summary: NOT IMPLEMENTED- administrative action to forget a user (part of GDPR compliance)
+            tags:
+                - Privacy
+    /touchpoints:
+        delete:
+            description: |
+                Admin remove touchpoints; request parameters to filter which touchpoints are deleted. If no parameters are supplied then all touchpoints removed. (This might be typical; a system might capture touchpoints for a month then clear them all.)
+            operationId: deleteTouchpoints
+            parameters:
+                - $ref: '#/components/parameters/touchpointsFilter'
+                - $ref: '#/components/parameters/application'
+                - $ref: '#/components/parameters/feature'
+            responses:
+                "204":
+                    description: No content (delete completed).
+                "400":
+                    content:
+                        '*/*':
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid.
+                "403":
+                    content:
+                        '*/*':
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Forbidden.  This operation is restricted to administrators.
+            summary: Admin remove touchpoints
+            tags:
+                - Touchpoints
+        get:
+            description: |
+                Return a collection of touchpoint (media type: application/vnd.sas.activities.touchpoint+json). In addition to standard links returned with a collection, are admin restricted links `deleteTouchpoints` and `deleteTouchpoint`.
+            operationId: getTouchpoints
+            parameters:
+                - $ref: '#/components/parameters/application'
+                - $ref: '#/components/parameters/feature'
+                - $ref: '#/components/parameters/touchpointsFilter'
+                - $ref: '#/components/parameters/start'
+                - $ref: '#/components/parameters/limit'
+                - $ref: '#/components/parameters/touchpointsSortBy'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/touchpointCollection'
+                        application/vnd.sas.collection+json:
+                            schema:
+                                $ref: '#/components/schemas/touchpointCollection'
+                    description: The touchpoints
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+            summary: Get touchpoints
+            tags:
+                - Touchpoints
+        post:
+            description: |
+                This is the operation most clients will use, specifying that their touchpoint of interest occurred.  Values for `application` and `feature` are recommended to be lowerCamelCase. Other values of the touchpoint media type are system generated and ignored on upload.
+                In the unexpected case of an error, clients are encouraged to not share with the user (the user is unaware of touchpoint tracking and need not know of a failure).
+            operationId: createTouchpoint
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/touchpoint'
+                    application/vnd.sas.activitiestouchpoint+json:
+                        schema:
+                            $ref: '#/components/schemas/touchpoint'
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/touchpoint'
+                        application/vnd.sas.activities.touchpoint+json:
+                            schema:
+                                $ref: '#/components/schemas/touchpoint'
+                    description: The touchpoint has been updated
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "201":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/touchpoint'
+                        application/vnd.sas.activities.touchpoint+json:
+                            schema:
+                                $ref: '#/components/schemas/touchpoint'
+                    description: The touchpoint has been created
+                    headers:
+                        Location:
+                            description: Location of the new touchpoint
+                            schema:
+                                type: string
+                "400":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.activities.touchpoint+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: The request was invalid.
+            summary: Add or update a touchpoint
+            tags:
+                - Touchpoints
+    /touchpoints/{touchpointId}:
+        delete:
+            description: Admin remove a single touchpoint
+            operationId: deleteTouchpoint
+            parameters:
+                - description: The touchpoint id
+                  in: path
+                  name: touchpointId
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "204":
+                    description: No content.
+                "403":
+                    content:
+                        '*/*':
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Forbidden.  This operation is restricted to administrators.
+            summary: Admin remove a single touchpoint
+            tags:
+                - Touchpoints
+        get:
+            description: Get the specified touchpoint
+            operationId: getTouchpoint
+            parameters:
+                - description: The touchpoint id
+                  in: path
+                  name: touchpointId
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/touchpoint'
+                        application/vnd.sas.activities.touchpoint+json:
+                            schema:
+                                $ref: '#/components/schemas/touchpoint'
+                    description: OK, the requested touchpoint.
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+                "404":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                        application/vnd.sas.activities.touchpoint+json:
+                            schema:
+                                $ref: '#/components/schemas/error2'
+                    description: Not found
+            summary: Get touchpoint
+            tags:
+                - Touchpoints
+    /types:
+        get:
+            description: |
+                Return collection of activity types (media type: application/vnd.sas.activities.type+json).  This might be used to allow the user to select a subset of types.
+                Activity types without a constraining object type sort first, subsequently sorted by the localized label.
+            operationId: getTypes
+            parameters:
+                - $ref: '#/components/parameters/client'
+                - description: |
+                    Optional parameter to restrict to activity types specifically supporting this object type. Special value `@none` will return types which do not specify an `objectType` in their registration.
+                  in: query
+                  name: objectType
+                  required: false
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/activityTypeCollection'
+                        application/vnd.sas.collection+json:
+                            schema:
+                                $ref: '#/components/schemas/activityTypeCollection'
+                    description: The activity types
+                    headers:
+                        Content-Type:
+                            schema:
+                                format: media-type
+                                type: string
+            summary: Get collection of activity types suitable for this client
+            tags:
+                - Activities
+servers:
+    - description: Sample server URL.
+      url: http://example.com/activities
+    - description: Sample server URL.
+      url: https://example.com/activities
+tags:
+    - description: The operations adding or querying activity instances.
+      name: Activities
+    - description: The operations adding or querying touchpoint instances.
+      name: Touchpoints
+    - description: The operations for the root resource.
+      name: Root
+    - description: Operations for user privacy, to be forgotten.
+      name: Privacy
+    - description: Operations for deleting old records.
+      name: Maintenance
